@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: "http://54.179.35.186:3000/",
+  baseURL: "http://54.169.162.174:3000",
 });
 
 // instance.urlImage = "http://54.179.35.186:3200/images/";

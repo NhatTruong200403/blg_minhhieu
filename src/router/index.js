@@ -1,75 +1,67 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import admin from './admin.js';
 import HomeView from '../View/Home/Home.vue';
+import index from './home.js'
 import AboutView from '../View/Home/about/aboutme.vue';
 import Detail from '../View/Home/post/Detail.vue';
-
+import home from './home.js';
+import Login from '../View/Home/Login.vue';
 // Định nghĩa các route chính
 const routes = [
-    // ...admin,
+    ...index,
+    ...admin,
+    ...home,
+
     {
         path: '/',
-        redirect: '/Home', // Chuyển hướng về /Home
+        redirect: '/Home/ListBlogs', // Chuyển hướng về /Home
     },
     {
-        path: '/Home',
+        path: '/Home/ListBlogs',
         name: 'HomeView',
         component: HomeView, // Thêm route cho Home
     },
+    // ,
     {
-        path: '/aboutme',
-        name: 'AboutView',
-        component: AboutView,
+        path: '/Login',
+        name: 'Login',
+        component: Login,
     },
-    {
-        // path: '/detail/:id',
-        path: '/detail',
-        name: 'Detail',
-        component: Detail,
-    },
+    
 ];
-
 // Tạo router
 const router = createRouter({
-    history: createWebHistory(),
+    history: createWebHistory(import.meta.env.BASE_URL), // Nên thêm BASE_URL
     routes,
     scrollBehavior(to, from, savedPosition) {
-        // Nếu đã lưu vị trí cuộn (khi dùng nút quay lại/tiến tới)
         if (savedPosition) {
             return savedPosition;
         }
-        // Mặc định cuộn về đầu trang
         return { top: 0 };
     },
 });
 
-// Hàm lấy role của người dùng từ sessionStorage
-// Hàm lấy danh sách role của user từ sessionStorage
-// function getUserRoles() {
-//     const user = JSON.parse(sessionStorage.getItem('User'));
-//     return user?.roles || ['guest']; // Nếu không có, trả về danh sách với 'guest' mặc định
-// }
+const isAuthenticated = () => {
+    return !!localStorage.getItem('authToken'); // Chú ý: Đây chỉ là ví dụ!
+};
 
-// Hàm kiểm tra quyền truy cập
 router.beforeEach((to, from, next) => {
-    // const requiredRoles = to.meta.requiresRole; // Có thể là mảng hoặc chuỗi
-    // const userRoles = getUserRoles(); // Lấy danh sách role của người dùng từ sessionStorage
-
-    // console.log('Required Roles:', requiredRoles);
-    // console.log('User Roles:', userRoles);
-
-    // // Nếu `requiredRoles` là mảng, kiểm tra ít nhất một role của user có nằm trong requiredRoles
-    // if (requiredRoles && Array.isArray(requiredRoles)) {
-    //     const hasAccess = userRoles.some(role => requiredRoles.includes(role));
-    //     if (!hasAccess) {
-    //         return next({ name: 'unauthorized' }); // Chuyển hướng đến trang không có quyền truy cập
-    //     }
-    // } else if (requiredRoles && !userRoles.includes(requiredRoles)) {
-    //     // Nếu `requiredRoles` là chuỗi, kiểm tra xem userRoles có chứa requiredRole hay không
-    //     return next({ name: 'unauthorized' }); // Chuyển hướng đến trang không có quyền truy cập
-    // }
-
-    next(); // Cho phép truy cập nếu mọi điều kiện đều đúng
+    const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
+    const requiresGuest = to.matched.some(record => record.meta.requiresGuest);
+    const loggedIn = isAuthenticated();
+    if (requiresAuth && !loggedIn) {
+        // Nếu route yêu cầu đăng nhập mà người dùng chưa đăng nhập
+        console.log('Chưa đăng nhập, chuyển hướng tới /Login');
+        // Lưu lại đường dẫn người dùng muốn vào để chuyển hướng lại sau khi đăng nhập (tùy chọn)
+        next({ name: 'Login', query: { redirect: to.fullPath } });
+    } else if (requiresGuest && loggedIn) {
+        // Nếu route yêu cầu là khách (vd: trang Login) mà người dùng đã đăng nhập
+        console.log('Đã đăng nhập, chuyển hướng khỏi /Login');
+        next('/Home/ListBlogs'); // Chuyển về trang chủ hoặc dashboard
+    } else {
+        // Nếu không thuộc các trường hợp trên (route công khai, hoặc route cần login mà đã login)
+        next(); // Cho phép đi tiếp
+    }
 });
 
 export default router;
